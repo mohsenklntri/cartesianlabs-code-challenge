@@ -1,0 +1,9 @@
+# Ignore Airflow logs and temp files
+airflow/logs/
+airflow/tmp/
+
+# Ignore Python compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
