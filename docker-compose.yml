@@ -12,6 +12,8 @@ services:
       - "${POSTGRES_PORT}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - airflow
 
   # MongoDB 6
   mongo:
@@ -22,6 +24,8 @@ services:
       - "${MONGO_PORT}:27017"
     volumes:
       - mongo_data:/data/db
+    networks:
+      - airflow
 
   # Redis
   redis:
@@ -30,15 +34,21 @@ services:
     restart: always
     ports:
       - "${REDIS_PORT}:6379"
+    networks:
+      - airflow
 
   # Airflow Webserver
   airflow-webserver:
-    image: apache/airflow:2.7.3
+    # image: apache/airflow:2.7.3
+    build: .
     container_name: airflow-webserver
     restart: always
     depends_on:
       - postgres
       - redis
+      - mongo
+    env_file:
+      - .env
     environment:
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
@@ -51,6 +61,8 @@ services:
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
     ports:
       - "${AIRFLOW_PORT}:8080"
+    networks:
+      - airflow
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
@@ -59,20 +71,26 @@ services:
     entrypoint: >
       /bin/bash -c "airflow db upgrade &&
       airflow users create --username ${AIRFLOW_USERNAME} --password ${AIRFLOW_PASSWORD} --firstname Admin --lastname User --role Admin --email ${AIRFLOW_EMAIL} &&
+      airflow connections get '${MONGO_CONN_ID}' || airflow connections add '${MONGO_CONN_ID}' --conn-type 'mongo' --conn-host 'mongo' --conn-port '${MONGO_PORT}' --conn-schema '${MONGO_DB}' &&
       airflow webserver"
 
   # Airflow Scheduler
   airflow-scheduler:
-    image: apache/airflow:2.7.3
+    # image: apache/airflow:2.7.3
+    build: .
     container_name: airflow-scheduler
     restart: always
     depends_on:
       - airflow-webserver
+    env_file:
+      - .env
     environment:
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
       AIRFLOW__CELERY__BROKER_URL: redis://redis:${REDIS_PORT}/0
       AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
+    networks:
+      - airflow
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
@@ -82,22 +100,31 @@ services:
 
   # Airflow Worker
   airflow-worker:
-    image: apache/airflow:2.7.3
+    # image: apache/airflow:2.7.3
+    build: .
     container_name: airflow-worker
     restart: always
     depends_on:
       - airflow-scheduler
+    env_file:
+      - .env
     environment:
       AIRFLOW__CORE__EXECUTOR: CeleryExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
       AIRFLOW__CELERY__BROKER_URL: redis://redis:${REDIS_PORT}/0
       AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
+    networks:
+      - airflow
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/config:/opt/airflow/config
       - ./airflow/plugins:/opt/airflow/plugins
     entrypoint: airflow celery worker
+
+networks:
+  airflow:
+    driver: bridge
 
 volumes:
   postgres_data:
