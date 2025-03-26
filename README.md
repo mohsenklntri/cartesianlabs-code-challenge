@@ -25,7 +25,7 @@ Ensure you have the following installed on your system:
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/mohsenklntri/cartesianlabs-code-challenge
+   git clone https://github.com/mohsenklntri/cartesianlabs-code-challenge.git
    cd <repository-folder>
 2. Start the services using Docker Compose:
 
