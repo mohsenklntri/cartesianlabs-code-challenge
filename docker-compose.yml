@@ -11,7 +11,7 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - ./postgres_data/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - airflow
 
@@ -72,6 +72,7 @@ services:
       /bin/bash -c "airflow db upgrade &&
       airflow users create --username ${AIRFLOW_USERNAME} --password ${AIRFLOW_PASSWORD} --firstname Admin --lastname User --role Admin --email ${AIRFLOW_EMAIL} &&
       airflow connections get '${MONGO_CONN_ID}' || airflow connections add '${MONGO_CONN_ID}' --conn-type 'mongo' --conn-host 'mongo' --conn-port '${MONGO_PORT}' --conn-schema '${MONGO_DB}' &&
+      airflow connections get '${POSTGRES_CONN_ID}' || airflow connections add '${POSTGRES_CONN_ID}' --conn-type 'postgres' --conn-host 'postgres' --conn-port '${POSTGRES_PORT}' --conn-login '${POSTGRES_USER}' --conn-password '${POSTGRES_PASSWORD}' --conn-schema '${POSTGRES_DB}' &&
       airflow webserver"
 
   # Airflow Scheduler
