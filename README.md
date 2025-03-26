@@ -38,7 +38,7 @@ Ensure you have the following installed on your system:
 
 4. Enable and trigger DAGs in the following order:
 
-   - **coin_data_pipeline**
+   - **crypto_data_pipeline**
    - **news_data_pipeline**
 
    Wait for both DAGs to complete execution before verifying the stored data.
